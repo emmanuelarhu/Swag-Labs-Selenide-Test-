@@ -1,0 +1,12 @@
+version: '3'
+services:
+  tests:
+    build: .
+    volumes:
+      - ./target:/app/target
+      - ./test-output:/app/test-output
+    environment:
+      - SELENIUM_BROWSER=chrome
+      - SELENIUM_HEADLESS=true
+      - ALLURE_RESULTS_DIR=/app/target/allure-results
+

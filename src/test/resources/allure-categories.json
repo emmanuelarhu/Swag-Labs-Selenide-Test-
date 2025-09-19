@@ -1,0 +1,48 @@
+[
+  {
+    "name": "Failed Tests",
+    "matchedStatuses": ["failed"],
+    "messageRegex": ".*"
+  },
+  {
+    "name": "Broken Tests",
+    "matchedStatuses": ["broken"],
+    "messageRegex": ".*"
+  },
+  {
+    "name": "Login Issues",
+    "matchedStatuses": ["failed", "broken"],
+    "traceRegex": ".*LoginPage.*"
+  },
+  {
+    "name": "Product Issues",
+    "matchedStatuses": ["failed", "broken"],
+    "traceRegex": ".*ProductsPage.*"
+  },
+  {
+    "name": "Cart Issues",
+    "matchedStatuses": ["failed", "broken"],
+    "traceRegex": ".*CartPage.*"
+  },
+  {
+    "name": "Checkout Issues",
+    "matchedStatuses": ["failed", "broken"],
+    "traceRegex": ".*CheckoutPage.*"
+  },
+  {
+    "name": "Element Not Found",
+    "matchedStatuses": ["failed", "broken"],
+    "traceRegex": ".*(NoSuchElementException|ElementNotFound).*"
+  },
+  {
+    "name": "Assertion Errors",
+    "matchedStatuses": ["failed"],
+    "traceRegex": ".*AssertionError.*"
+  },
+  {
+    "name": "Test Data Issues",
+    "matchedStatuses": ["failed", "broken"],
+    "traceRegex": ".*TestData.*"
+  }
+]
+
