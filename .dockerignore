@@ -1,0 +1,35 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Build outputs
+target/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+
+# CI/CD
+.github/
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Node modules
+node_modules/
+
+# Temporary files
+tmp/
+
+# Documentation
+README.md
+*.md

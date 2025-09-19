@@ -45,8 +45,8 @@ public class RegressionTests extends BaseTest {
                                        String expectedDescriptionPart) {
         LoginPage loginPage = new LoginPage();
         ProductsPage productsPage = loginPage.login(
-                config.getStandardUsername(),
-                config.getStandardPassword()
+                getConfig().getStandardUsername(),
+                getConfig().getStandardPassword()
         );
 
         String actualPrice = productsPage.getProductPrice(productName);
@@ -66,8 +66,8 @@ public class RegressionTests extends BaseTest {
     public void testCartWithMultipleProducts(String[] productNames, int expectedCount) {
         LoginPage loginPage = new LoginPage();
         ProductsPage productsPage = loginPage.login(
-                config.getStandardUsername(),
-                config.getStandardPassword()
+                getConfig().getStandardUsername(),
+                getConfig().getStandardPassword()
         );
 
         // Add all products
@@ -92,8 +92,8 @@ public class RegressionTests extends BaseTest {
     public void testProductSorting(String sortValue, String sortDescription) {
         LoginPage loginPage = new LoginPage();
         ProductsPage productsPage = loginPage.login(
-                config.getStandardUsername(),
-                config.getStandardPassword()
+                getConfig().getStandardUsername(),
+                getConfig().getStandardPassword()
         );
 
         productsPage.sortProducts(sortValue);
@@ -118,8 +118,8 @@ public class RegressionTests extends BaseTest {
     public void testCheckoutProcess(String firstName, String lastName, String postalCode, String country) {
         LoginPage loginPage = new LoginPage();
         ProductsPage productsPage = loginPage.login(
-                config.getStandardUsername(),
-                config.getStandardPassword()
+                getConfig().getStandardUsername(),
+                getConfig().getStandardPassword()
         );
 
         // Add products
@@ -146,8 +146,8 @@ public class RegressionTests extends BaseTest {
     public void testPageNavigation() {
         LoginPage loginPage = new LoginPage();
         ProductsPage productsPage = loginPage.login(
-                config.getStandardUsername(),
-                config.getStandardPassword()
+                getConfig().getStandardUsername(),
+                getConfig().getStandardPassword()
         );
 
         // Navigate to product details
@@ -174,8 +174,8 @@ public class RegressionTests extends BaseTest {
     public void testFormValidation() {
         LoginPage loginPage = new LoginPage();
         ProductsPage productsPage = loginPage.login(
-                config.getStandardUsername(),
-                config.getStandardPassword()
+                getConfig().getStandardUsername(),
+                getConfig().getStandardPassword()
         );
 
         productsPage.addProductToCart("Sauce Labs Backpack");
@@ -200,10 +200,11 @@ public class RegressionTests extends BaseTest {
     @Severity(SeverityLevel.NORMAL)
     @Description("Test session state management")
     public void testSessionManagement() {
+        // First session - add items to cart
         LoginPage loginPage = new LoginPage();
         ProductsPage productsPage = loginPage.login(
-                config.getStandardUsername(),
-                config.getStandardPassword()
+                getConfig().getStandardUsername(),
+                getConfig().getStandardPassword()
         );
 
         // Add items to cart
@@ -211,17 +212,71 @@ public class RegressionTests extends BaseTest {
         productsPage.addProductToCart("Sauce Labs Bike Light");
         assertThat(productsPage.getCartItemsCount()).isEqualTo(2);
 
-        // Logout
+        // Logout to end session
         LoginPage logoutPage = productsPage.logout();
         logoutPage.verifyLoginPageDisplayed();
 
-        // Login again
+        // Start new session - login again
         ProductsPage newSession = logoutPage.login(
-                config.getStandardUsername(),
-                config.getStandardPassword()
+                getConfig().getStandardUsername(),
+                getConfig().getStandardPassword()
         );
 
-        // Verify cart is empty in new session
-        assertThat(newSession.getCartItemsCount()).isEqualTo(0);
+        // Verify cart is empty in new session (this is expected behavior for this app)
+        // Note: SauceDemo doesn't persist cart across sessions, so cart should be empty
+        int cartCount = newSession.getCartItemsCount();
+
+        // For SauceDemo, cart doesn't persist across sessions, so we expect 0
+        // If your application should persist cart, change this assertion accordingly
+        assertThat(cartCount).describedAs("Cart should be empty after new login session").isEqualTo(0);
+    }
+
+    @Test(priority = 9, groups = {"regression", "ui"})
+    @Story("UI Elements")
+    @Severity(SeverityLevel.MINOR)
+    @Description("Test UI elements are displayed correctly")
+    public void testUIElements() {
+        LoginPage loginPage = new LoginPage();
+        ProductsPage productsPage = loginPage.login(
+                getConfig().getStandardUsername(),
+                getConfig().getStandardPassword()
+        );
+
+        // Verify UI elements
+        assertThat(productsPage.getAllProductNames()).hasSize(6);
+        assertThat(productsPage.getAllProductPrices()).hasSize(6);
+
+        // Test product interactions
+        productsPage.addProductToCart("Sauce Labs Backpack");
+        assertThat(productsPage.getCartItemsCount()).isEqualTo(1);
+
+        // Navigate to cart and verify UI
+        CartPage cartPage = productsPage.navigateToCart();
+        cartPage.verifyCartPageDisplayed();
+        assertThat(cartPage.getCartItemsCount()).isEqualTo(1);
+    }
+
+    @Test(priority = 10, groups = {"regression", "error-handling"})
+    @Story("Error Handling")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Test application error handling")
+    public void testErrorHandling() {
+        LoginPage loginPage = new LoginPage();
+
+        // Test invalid login
+        loginPage.login("invalid_user", "invalid_password");
+        loginPage.verifyErrorMessageDisplayed();
+
+        String errorMessage = loginPage.getErrorMessageText();
+        assertThat(errorMessage).contains("do not match");
+
+        // Clear and try valid login
+        loginPage.clearForm();
+        ProductsPage productsPage = loginPage.login(
+                getConfig().getStandardUsername(),
+                getConfig().getStandardPassword()
+        );
+
+        productsPage.verifyProductsPageDisplayed();
     }
 }

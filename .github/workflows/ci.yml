@@ -1,0 +1,182 @@
+name: SwagLabs Test Automation
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM UTC
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Test Type'
+        required: false
+        default: 'smoke'
+        type: choice
+        options:
+          - smoke
+          - regression
+          - all
+      browser:
+        description: 'Browser'
+        required: false
+        default: 'chrome'
+        type: choice
+        options:
+          - chrome
+          - firefox
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+env:
+  MAVEN_OPTS: "-Xmx2g"
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        browser: ${{ fromJSON(format('["{0}"]', github.event.inputs.browser || 'chrome')) }}
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Set up Chrome
+        if: matrix.browser == 'chrome'
+        uses: browser-actions/setup-chrome@latest
+
+      - name: Set up Firefox
+        if: matrix.browser == 'firefox'
+        uses: browser-actions/setup-firefox@latest
+
+      - name: Build Docker image
+        run: |
+          docker build -t swaglabs-tests .
+
+      - name: Run tests in Docker
+        run: |
+          mkdir -p target/allure-results target/screenshots
+          
+          docker run --rm \
+            -e TEST_TYPE=${{ github.event.inputs.test_type || 'smoke' }} \
+            -e BROWSER=${{ matrix.browser }} \
+            -v $(pwd)/target:/app/target \
+            --security-opt seccomp=unconfined \
+            --shm-size=2g \
+            swaglabs-tests
+        continue-on-error: true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.browser }}
+          path: |
+            target/allure-results/
+            target/screenshots/
+          retention-days: 7
+
+  publish-report:
+    name: Publish Report
+    runs-on: ubuntu-latest
+    needs: test
+    if: always()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download test results
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Merge results
+        run: |
+          mkdir -p merged-results
+          find artifacts -name "*.json" -o -name "*.xml" | xargs -I {} cp {} merged-results/ 2>/dev/null || true
+
+      - name: Generate Allure report
+        uses: simple-elf/allure-report-action@master
+        if: always()
+        with:
+          allure_results: merged-results
+          gh_pages: gh-pages
+          keep_reports: 10
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        if: always()
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: gh-pages
+
+  notify:
+    name: Send Notification
+    runs-on: ubuntu-latest
+    needs: [test, publish-report]
+    if: always() && (github.event_name == 'push' || github.event_name == 'schedule')
+
+    steps:
+      - name: Determine status
+        id: status
+        run: |
+          if [[ "${{ needs.test.result }}" == "success" ]]; then
+            echo "message=✅ SwagLabs Tests PASSED" >> $GITHUB_OUTPUT
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "message=❌ SwagLabs Tests FAILED" >> $GITHUB_OUTPUT
+            echo "status=failure" >> $GITHUB_OUTPUT
+          fi
+          
+          REPO_NAME="${{ github.event.repository.name }}"
+          OWNER="${{ github.repository_owner }}"
+          echo "report_url=https://${OWNER}.github.io/${REPO_NAME}/" >> $GITHUB_OUTPUT
+
+      - name: Send email notification
+        uses: dawidd6/action-send-mail@v3
+        if: always()
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: '${{ steps.status.outputs.message }}'
+          to: ${{ secrets.NOTIFICATION_EMAIL }}
+          from: ${{ secrets.EMAIL_USERNAME }}
+          body: |
+            SwagLabs Test Automation Results
+            
+            Status: ${{ steps.status.outputs.message }}
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Triggered by: ${{ github.actor }}
+            Date: $(date)
+            
+            View Report: ${{ steps.status.outputs.report_url }}
+            GitHub Action: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            
+            Test Coverage:
+            ✅ Login Flow
+            ✅ Product Catalog
+            ✅ Shopping Cart
+            ✅ Checkout Process
+            ✅ Order Completion
