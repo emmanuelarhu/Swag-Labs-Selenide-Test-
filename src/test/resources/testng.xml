@@ -8,17 +8,41 @@
         <listener class-name="io.qameta.allure.testng.AllureTestNg"/>
     </listeners>
 
+    <!-- Smoke Tests -->
     <test name="Smoke-Tests" preserve-order="true">
         <parameter name="testType" value="smoke"/>
+        <groups>
+            <run>
+                <include name="smoke"/>
+                <include name="critical"/>
+            </run>
+        </groups>
         <classes>
             <class name="com.swaglabs.tests.SmokeTests"/>
+            <class name="com.swaglabs.tests.LoginTest">
+                <methods>
+                    <include name="testValidLogin"/>
+                    <include name="testInvalidLogin"/>
+                    <include name="testLoginPageElements"/>
+                </methods>
+            </class>
         </classes>
     </test>
 
+    <!-- Regression Tests -->
     <test name="Regression-Tests" preserve-order="true">
         <parameter name="testType" value="regression"/>
+        <groups>
+            <run>
+                <include name="regression"/>
+            </run>
+        </groups>
         <classes>
             <class name="com.swaglabs.tests.RegressionTests"/>
+            <class name="com.swaglabs.tests.ProductsTest"/>
+            <class name="com.swaglabs.tests.CartTest"/>
+            <class name="com.swaglabs.tests.CheckoutTest"/>
+            <class name="com.swaglabs.tests.LogoutTest"/>
         </classes>
     </test>
 

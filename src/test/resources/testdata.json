@@ -1,0 +1,124 @@
+{
+  "users": {
+    "standard": {
+      "username": "standard_user",
+      "password": "secret_sauce",
+      "type": "valid",
+      "shouldSucceed": true,
+      "description": "Standard User"
+    },
+    "locked": {
+      "username": "locked_out_user",
+      "password": "secret_sauce",
+      "type": "locked",
+      "shouldSucceed": false,
+      "description": "Locked User"
+    },
+    "problem": {
+      "username": "problem_user",
+      "password": "secret_sauce",
+      "type": "valid",
+      "shouldSucceed": true,
+      "description": "Problem User"
+    },
+    "performance": {
+      "username": "performance_glitch_user",
+      "password": "secret_sauce",
+      "type": "valid",
+      "shouldSucceed": true,
+      "description": "Performance Glitch User"
+    }
+  },
+  "products": [
+    {
+      "name": "Sauce Labs Backpack",
+      "price": "$29.99",
+      "description": "carry.allTheThings() with the sleek, streamlined Sly Pack"
+    },
+    {
+      "name": "Sauce Labs Bike Light",
+      "price": "$9.99",
+      "description": "A red light isn't the desired state in testing"
+    },
+    {
+      "name": "Sauce Labs Bolt T-Shirt",
+      "price": "$15.99",
+      "description": "Get your testing superhero on with the Sauce Labs bolt T-shirt"
+    },
+    {
+      "name": "Sauce Labs Fleece Jacket",
+      "price": "$49.99",
+      "description": "It's not every day that you come across a midweight quarter-zip fleece jacket"
+    },
+    {
+      "name": "Sauce Labs Onesie",
+      "price": "$7.99",
+      "description": "Rib snap infant onesie for the junior automation engineer"
+    },
+    {
+      "name": "Test.allTheThings() T-Shirt (Red)",
+      "price": "$15.99",
+      "description": "This classic Sauce Labs t-shirt is perfect to wear when cozying"
+    }
+  ],
+  "checkout": [
+    {
+      "firstName": "Emmanuel",
+      "lastName": "Arhu",
+      "postalCode": "233",
+      "country": "Ghana"
+    },
+    {
+      "firstName": "John",
+      "lastName": "Doe",
+      "postalCode": "12345",
+      "country": "USA"
+    },
+    {
+      "firstName": "Jane",
+      "lastName": "Smith",
+      "postalCode": "SW1A 1AA",
+      "country": "UK"
+    }
+  ],
+  "invalidLogin": [
+    {
+      "username": "invalid_user",
+      "password": "secret_sauce",
+      "expectedError": "Username and password do not match any user in this service"
+    },
+    {
+      "username": "standard_user",
+      "password": "invalid_password",
+      "expectedError": "Username and password do not match any user in this service"
+    },
+    {
+      "username": "",
+      "password": "secret_sauce",
+      "expectedError": "Username is required"
+    },
+    {
+      "username": "standard_user",
+      "password": "",
+      "expectedError": "Password is required"
+    }
+  ],
+  "sorting": [
+    {
+      "value": "az",
+      "description": "Name (A to Z)"
+    },
+    {
+      "value": "za",
+      "description": "Name (Z to A)"
+    },
+    {
+      "value": "lohi",
+      "description": "Price (low to high)"
+    },
+    {
+      "value": "hilo",
+      "description": "Price (high to low)"
+    }
+  ]
+}
