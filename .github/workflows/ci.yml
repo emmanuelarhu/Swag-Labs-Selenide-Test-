@@ -78,7 +78,7 @@ jobs:
         run: |
           echo "Running tests with Docker..."
           
-          # Run Docker container with proper environment variables
+          # Run Docker container
           docker run --rm \
             --name swaglabs-test-${{ matrix.browser }} \
             -e TEST_TYPE=${{ github.event.inputs.test_type || 'smoke' }} \
@@ -126,22 +126,6 @@ jobs:
           # Always continue to generate reports
           exit 0
 
-      - name: Verify test artifacts
-        run: |
-          echo "Checking generated artifacts..."
-          
-          echo "Target directory contents:"
-          ls -la ./target/ || echo "No target directory"
-          
-          echo "Allure results:"
-          ls -la ./target/allure-results/ || echo "No allure results"
-          
-          echo "Screenshots:"
-          ls -la ./target/screenshots/ || echo "No screenshots"
-          
-          echo "Logs:"
-          ls -la ./logs/ || echo "No logs"
-
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
@@ -149,6 +133,7 @@ jobs:
           name: test-results-${{ matrix.browser }}-${{ github.run_number }}
           path: |
             target/allure-results/
+            target/allure-report/
             target/screenshots/
             logs/
           retention-days: 7
@@ -160,9 +145,19 @@ jobs:
     needs: test
     if: always()
 
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
 
       - name: Download test results
         uses: actions/download-artifact@v4
@@ -203,7 +198,7 @@ jobs:
           echo "Merging test results..."
           mkdir -p merged-results
           
-          # Find and merge all results
+          # Find and merge all results from artifacts
           find artifacts -name "allure-results" -type d 2>/dev/null | while read dir; do
             if [ -d "$dir" ] && [ "$(ls -A "$dir" 2>/dev/null)" ]; then
               echo "Copying from: $dir"
@@ -237,25 +232,82 @@ jobs:
           fi
           
           echo "Final merged results:"
-          ls -la merged-results/
+          ls -la merged-results/ || echo "No merged results"
 
-      - name: Generate Allure report
-        uses: simple-elf/allure-report-action@master
-        if: always()
+      - name: Install Allure CLI
+        run: |
+          wget -O allure-commandline.tgz https://github.com/allure-framework/allure2/releases/download/2.25.0/allure-2.25.0.tgz
+          tar -zxf allure-commandline.tgz
+          sudo mv allure-2.25.0 /opt/allure
+          sudo ln -s /opt/allure/bin/allure /usr/local/bin/allure
+          allure --version
+
+      - name: Generate Allure Report
+        run: |
+          echo "Generating Allure report..."
+          
+          # Create environment info
+          cat > environment.properties << EOF
+          Browser=${{ github.event.inputs.browser || 'chrome' }}
+          Test.Type=${{ github.event.inputs.test_type || 'smoke' }}
+          Environment=GitHub Actions
+          Branch=${{ github.ref_name }}
+          Commit=${{ github.sha }}
+          Date=$(date)
+          Repository=${{ github.repository }}
+          EOF
+          
+          cp environment.properties merged-results/ 2>/dev/null || true
+          
+          # Generate report
+          allure generate merged-results --output allure-report --clean
+          
+          # Add build info
+          cat > allure-report/build-info.html << EOF
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Build Information</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+              .info { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+              .header { color: #2196F3; margin-bottom: 20px; }
+              .item { margin: 10px 0; }
+              .label { font-weight: bold; color: #555; }
+              .value { color: #333; }
+              a { color: #2196F3; text-decoration: none; }
+              a:hover { text-decoration: underline; }
+            </style>
+          </head>
+          <body>
+            <div class="info">
+              <h2 class="header">🚀 SwagLabs Test Execution</h2>
+              <div class="item"><span class="label">Commit:</span> <span class="value">${{ github.sha }}</span></div>
+              <div class="item"><span class="label">Branch:</span> <span class="value">${{ github.ref_name }}</span></div>
+              <div class="item"><span class="label">Build Date:</span> <span class="value">$(date)</span></div>
+              <div class="item"><span class="label">Test Type:</span> <span class="value">${{ github.event.inputs.test_type || 'smoke' }}</span></div>
+              <div class="item"><span class="label">Browser:</span> <span class="value">${{ github.event.inputs.browser || 'chrome' }}</span></div>
+              <div class="item"><span class="label">Workflow:</span> <span class="value"><a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" target="_blank">${{ github.run_id }}</a></span></div>
+              <div class="item"><span class="label">Repository:</span> <span class="value"><a href="https://github.com/${{ github.repository }}" target="_blank">${{ github.repository }}</a></span></div>
+            </div>
+          </body>
+          </html>
+          EOF
+          
+          echo "Report generated successfully"
+          ls -la allure-report/
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          allure_results: merged-results
-          allure_history: allure-history
-          gh_pages: gh-pages
-          keep_reports: 10
+          path: ./allure-report
 
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        if: always()
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: gh-pages
-          publish_dir: gh-pages
-          force_orphan: false
+        id: deployment
+        uses: actions/deploy-pages@v4
 
   notify:
     name: Send Notification
