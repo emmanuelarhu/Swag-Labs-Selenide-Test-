@@ -12,6 +12,8 @@ import org.slf4j.LoggerFactory;
 import org.testng.ITestResult;
 import org.testng.annotations.*;
 
+import java.util.UUID;
+
 /**
  * Base test class that provides common setup and teardown functionality
  * for all test classes in the automation framework.
@@ -27,7 +29,8 @@ public abstract class BaseTest {
         try {
             // Initialize configuration first
             config = ConfigManager.getInstance();
-            logger.info("Configuration loaded successfully");
+            config.validateConfiguration();
+            logger.info("Configuration loaded and validated successfully");
 
             // Configure Selenide
             setupSelenideConfiguration();
@@ -73,10 +76,17 @@ public abstract class BaseTest {
             if (WebDriverRunner.hasWebDriverStarted()) {
                 try {
                     Selenide.closeWebDriver();
+                    logger.info("Closed existing WebDriver session");
                 } catch (Exception e) {
                     logger.warn("Error closing existing WebDriver: {}", e.getMessage());
                 }
             }
+
+            // Add a small delay to ensure cleanup is complete
+            Thread.sleep(1000);
+
+            // Configure Chrome options for Docker environment
+            setupChromeOptionsForDocker();
 
             // Open application URL
             String appUrl = config.getAppUrl();
@@ -135,6 +145,7 @@ public abstract class BaseTest {
             // Close WebDriver for this class
             if (WebDriverRunner.hasWebDriverStarted()) {
                 Selenide.closeWebDriver();
+                logger.info("WebDriver closed for class: {}", this.getClass().getSimpleName());
             }
         } catch (Exception e) {
             logger.warn("Error during class teardown: {}", e.getMessage());
@@ -183,6 +194,33 @@ public abstract class BaseTest {
             logger.error("Error configuring Selenide: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to configure Selenide", e);
         }
+    }
+
+    /**
+     * Setup Chrome options specifically for Docker environment
+     */
+    private void setupChromeOptionsForDocker() {
+        // Generate unique user data directory for each test session
+        String uniqueUserDataDir = "/tmp/chrome-user-data-" + UUID.randomUUID().toString();
+
+        // Set Chrome options via system properties
+        System.setProperty("chromeoptions.args", String.join(",",
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+                "--disable-extensions",
+                "--disable-web-security",
+                "--allow-running-insecure-content",
+                "--disable-background-timer-throttling",
+                "--disable-backgrounding-occluded-windows",
+                "--disable-renderer-backgrounding",
+                "--disable-features=TranslateUI",
+                "--disable-ipc-flooding-protection",
+                "--user-data-dir=" + uniqueUserDataDir,
+                "--remote-debugging-port=0"  // Use random port
+        ));
+
+        logger.info("Chrome options configured for Docker with user data dir: {}", uniqueUserDataDir);
     }
 
     /**
