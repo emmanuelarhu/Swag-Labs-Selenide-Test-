@@ -16,20 +16,17 @@ logs/
 
 # OS
 .DS_Store
+Thumbs.db
 
 # CI/CD
 .github/
 
-# Docker
-Dockerfile
-.dockerignore
-
-# Node modules
-node_modules/
-
-# Temporary files
-tmp/
-
 # Documentation
 README.md
 *.md
+
+# Docker
+docker-entrypoint.sh
+
+# Temporary files
+tmp/
