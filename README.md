@@ -966,7 +966,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 For issues, questions, or suggestions:
 
 - **Create an Issue**: [GitHub Issues](../../issues)
-- **Email**: your.email@example.com
+- **Email**: emmanuelarhu706@gmail.com
 - **Documentation**: Check the [Wiki](../../wiki) for detailed guides
 
 ---
